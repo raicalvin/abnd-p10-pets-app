@@ -59,6 +59,15 @@ public class CatalogActivity extends AppCompatActivity {
     }
 
     /**
+     * This will execute every time the activity is called on (when EditorActivity finishes and closes)
+     */
+    @Override
+    protected void onStart() {
+        super.onStart();
+        displayDatabaseInfo();
+    }
+
+    /**
      * Temporary helper method to display information in the onscreen TextView about the state of
      * the pets database.
      */
