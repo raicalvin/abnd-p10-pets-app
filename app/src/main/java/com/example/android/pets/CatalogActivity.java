@@ -19,6 +19,7 @@ import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
@@ -76,9 +77,6 @@ public class CatalogActivity extends AppCompatActivity {
         // and pass the context, which is the current activity.
         PetDbHelper mDbHelper = new PetDbHelper(this);
 
-        // Create and/or open a database to read from it
-        SQLiteDatabase db = mDbHelper.getReadableDatabase();
-
         // The projection is an array of columns we are interested in within the query
         String[] project = {
           PetEntry._ID,
@@ -88,16 +86,23 @@ public class CatalogActivity extends AppCompatActivity {
           PetEntry.COLUMN_PET_WEIGHT
         };
 
-        Cursor cursor = db.query(
-                PetEntry.TABLE_NAME,
+//        Cursor cursor = db.query(
+//                PetEntry.TABLE_NAME,
+//                project,
+//                null,
+//                null,
+//                null,
+//                null,
+//                null,
+//                null
+//        );
+
+        Cursor cursor = getContentResolver().query(
+                PetEntry.CONTENT_URI,
                 project,
                 null,
                 null,
-                null,
-                null,
-                null,
-                null
-        );
+                null);
 
         TextView displayView = (TextView) findViewById(R.id.text_view_pet);
 
@@ -148,9 +153,6 @@ public class CatalogActivity extends AppCompatActivity {
     }
 
     private void insertPet() {
-        // Gets the data repo in write mode
-        // Remember, your DBHelper object provides the connection to the database
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
 
         // Create the ContentValues object and store the values in it:
         ContentValues values = new ContentValues();
@@ -160,9 +162,7 @@ public class CatalogActivity extends AppCompatActivity {
         values.put(PetEntry.COLUMN_PET_WEIGHT, 7);
 
         // Insert the values into the database:
-
-        long newRowId = db.insert(PetEntry.TABLE_NAME, null, values);
-        Log.v("CatalogActivity", "The ID is " + newRowId);
+        Uri newUri = getContentResolver().insert(PetEntry.CONTENT_URI, values);
 
     }
 
