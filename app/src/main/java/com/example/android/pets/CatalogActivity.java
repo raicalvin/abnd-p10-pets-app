@@ -15,8 +15,13 @@
  */
 package com.example.android.pets;
 
+import android.app.LoaderManager;
+import android.content.ContentUris;
 import android.content.ContentValues;
+import android.content.Context;
+import android.content.CursorLoader;
 import android.content.Intent;
+import android.content.Loader;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
@@ -27,8 +32,12 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.CursorAdapter;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.android.pets.data.PetContract.PetEntry;
 import com.example.android.pets.data.PetDbHelper;
@@ -36,9 +45,15 @@ import com.example.android.pets.data.PetDbHelper;
 /**
  * Displays list of pets that were entered and stored in the app.
  */
-public class CatalogActivity extends AppCompatActivity {
+public class CatalogActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
-    private PetDbHelper mDbHelper;
+    private static final int PET_LOADER = 0;
+
+    PetCursorAdapter mCursorAdapter;
+
+    // This view is used for the empty loading screen
+    View emptyView;
+    ListView petListView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,49 +70,39 @@ public class CatalogActivity extends AppCompatActivity {
             }
         });
 
-        mDbHelper = new PetDbHelper(this);
-
-        displayDatabaseInfo();
-    }
-
-    /**
-     * This will execute every time the activity is called on (when EditorActivity finishes and closes)
-     */
-    @Override
-    protected void onStart() {
-        super.onStart();
-        displayDatabaseInfo();
-    }
-
-    /**
-     * Temporary helper method to display information in the onscreen TextView about the state of
-     * the pets database.
-     */
-    private void displayDatabaseInfo() {
-        // The projection is an array of columns we are interested in within the query
-        String[] project = {
-          PetEntry._ID,
-          PetEntry.COLUMN_PET_NAME,
-          PetEntry.COLUMN_PET_BREED,
-          PetEntry.COLUMN_PET_GENDER,
-          PetEntry.COLUMN_PET_WEIGHT
-        };
-
-        Cursor cursor = getContentResolver().query(
-                PetEntry.CONTENT_URI,
-                project,
-                null,
-                null,
-                null);
-
         // Find the ListView which will be populated with the pet data
-        ListView petListView = (ListView) findViewById(R.id.list);
+        petListView = (ListView) findViewById(R.id.list);
 
-        // Setup an Adapter to create a list item for each row of the pet data in the cursor
-        PetCursorAdapter adapter = new PetCursorAdapter(this, cursor);
+        // Parent layout for the petListView
+        RelativeLayout catalog = (RelativeLayout) findViewById(R.id.catalog);
+        // Find and set empty view on the ListView so that it shows when database is empty
+        emptyView = getLayoutInflater().inflate(R.layout.empty_view, null);
+        // Add the emptyView to the parent catalog view
+        catalog.addView(emptyView);
 
+        // Create the Adapter to create list items for each pet row in Cursor.
+        mCursorAdapter = new PetCursorAdapter(this, null);
         // Attach the adapter to the ListView
-        petListView.setAdapter(adapter);
+        petListView.setAdapter(mCursorAdapter);
+
+        // Setup item click listener
+        petListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
+                // Create new Intent to go to EditorActivity
+                Intent intent = new Intent(CatalogActivity.this, EditorActivity.class);
+
+                Uri currentPetUri = ContentUris.withAppendedId(PetEntry.CONTENT_URI, id);
+
+                intent.setData(currentPetUri);
+
+                startActivity(intent);
+            }
+        });
+
+        // Start the Loader
+        getLoaderManager().initLoader(PET_LOADER, null, this);
+
     }
 
     private void insertPet() {
@@ -129,7 +134,6 @@ public class CatalogActivity extends AppCompatActivity {
             // Respond to a click on the "Insert dummy data" menu option
             case R.id.action_insert_dummy_data:
                 insertPet();
-                displayDatabaseInfo();
                 return true;
             // Respond to a click on the "Delete all entries" menu option
             case R.id.action_delete_all_entries:
@@ -137,5 +141,47 @@ public class CatalogActivity extends AppCompatActivity {
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    /* BELOW ARE THE IMPLEMENTED METHODS FOR THE CURSOR LOADER FOR BACKGROUND WORK */
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        // The projection is an array of columns we are interested in within the query
+        String[] project = {
+                PetEntry._ID,
+                PetEntry.COLUMN_PET_NAME,
+                PetEntry.COLUMN_PET_BREED,
+                PetEntry.COLUMN_PET_GENDER,
+                PetEntry.COLUMN_PET_WEIGHT
+        };
+
+        return new CursorLoader(this,
+                PetEntry.CONTENT_URI,
+                project,
+                null,
+                null,
+                null);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        mCursorAdapter.swapCursor(data);
+
+        // This toggles the empty view and list view depending on the adapter
+        if (mCursorAdapter.getCount() == 0) {
+            // Set the ListView to GONE
+            petListView.setVisibility(View.GONE);
+            emptyView.setVisibility(View.VISIBLE);
+        } else {
+            emptyView.setVisibility(View.GONE);
+            petListView.setVisibility(View.VISIBLE);
+        }
+
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        mCursorAdapter.swapCursor(null);
     }
 }
