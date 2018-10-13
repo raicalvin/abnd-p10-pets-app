@@ -137,7 +137,7 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
     }
 
     /* Get user input from editor and save new pet info database */
-    private void insertPet() {
+    private void savePet() {
         // Read from the input fields and use trim() to eliminate white space
         String nameString = mNameEditText.getText().toString().trim();
         String breedString = mBreedEditText.getText().toString().trim();
@@ -151,14 +151,23 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
         values.put(PetEntry.COLUMN_PET_GENDER, mGender);
         values.put(PetEntry.COLUMN_PET_WEIGHT, weight);
 
-        // Insert new pet into database:
-        Uri newUri = getContentResolver().insert(PetEntry.CONTENT_URI, values);
+
 
         // Show toast if insertion was successful
-        if (newUri == null) {
-            Toast.makeText(this, getString(R.string.editor_insert_pet_failed), Toast.LENGTH_SHORT).show();
+        if (mCurrentPetUri == null) {
+            Uri newUri = getContentResolver().insert(PetEntry.CONTENT_URI, values);
+            if (newUri == null) {
+                Toast.makeText(this, getString(R.string.editor_insert_pet_failed), Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, getString(R.string.editor_insert_pet_successful), Toast.LENGTH_SHORT).show();
+            }
         } else {
-            Toast.makeText(this, getString(R.string.editor_insert_pet_successful), Toast.LENGTH_SHORT).show();
+            int rowsAffected = getContentResolver().update(mCurrentPetUri, values, null, null);
+            if (rowsAffected == 0) {
+                Toast.makeText(this, getString(R.string.editor_update_pet_failed), Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, getString(R.string.editor_update_pet_successful), Toast.LENGTH_SHORT).show();
+            }
         }
 
     }
@@ -178,7 +187,7 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
             // Respond to a click on the "Save" menu option
             case R.id.action_save:
                 // Save pet to database:
-                insertPet();
+                savePet();
                 // Exit activity:
                 finish();
                 return true;
